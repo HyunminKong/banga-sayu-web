@@ -1,0 +1,10 @@
+{
+  "name": "사유상 복원 프로젝트",
+  "short_name": "사유상 복원",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#151916",
+  "theme_color": "#171b18",
+  "lang": "ko",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

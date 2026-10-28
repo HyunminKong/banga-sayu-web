@@ -1,0 +1,403 @@
+/* 시작 전 설정 로비와 1인칭 대화 화면 */
+.game-active[data-scene="intro"] .topbar,
+.game-active[data-scene="intro"] .progress-shell,
+.game-active[data-scene="intro"] .game-hud {
+  display: none !important;
+}
+
+.game-active[data-scene="intro"] #scene {
+  padding: 38px max(20px, calc((100vw - 1120px) / 2)) 60px;
+}
+
+.setup-screen {
+  min-height: calc(100dvh - 100px);
+  display: grid;
+  grid-template-columns: minmax(300px, .75fr) minmax(360px, 1.1fr);
+  gap: 26px;
+  align-items: center;
+}
+
+.setup-screen > img {
+  width: 100%;
+  height: min(72dvh, 760px);
+  object-fit: cover;
+  object-position: 50% 24%;
+  border: 1px solid rgba(255, 225, 166, .3);
+  border-radius: 28px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .42);
+}
+
+.setup-card {
+  padding: clamp(22px, 4vw, 42px);
+  background: rgba(24, 19, 16, .94);
+  border: 1px solid rgba(255, 225, 166, .24);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .46);
+}
+
+.setup-card h2 {
+  margin-top: 0;
+  font-size: clamp(1.65rem, 3vw, 2.5rem);
+}
+
+.setup-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin: 18px 0;
+}
+
+.setup-toggles label {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setup-enter {
+  width: 100%;
+  min-height: 58px;
+  margin-top: 18px;
+  font-size: 1.06rem;
+}
+
+body.pov-active::before {
+  background-image: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+body.pov-active::after {
+  display: none;
+}
+
+body.pov-active #scene {
+  width: 100%;
+  height: 100dvh;
+  padding: 0;
+  overflow: hidden;
+}
+
+.pov-stage {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(116, 78, 40, .28), transparent 42%),
+    linear-gradient(90deg, #0d0a08 0%, #201711 50%, #0d0a08 100%);
+}
+
+.pov-stage > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 39%;
+  animation: pov-arrive 1.05s ease-out both;
+}
+
+.pov-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(5, 3, 2, .18) 0%, transparent 36%, rgba(5, 3, 2, .86) 100%),
+    radial-gradient(circle at 50% 42%, transparent 35%, rgba(4, 3, 2, .5) 100%);
+}
+
+.pov-bottom {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  width: min(980px, calc(100% - 34px));
+  transform: translateX(-50%);
+}
+
+.pov-name {
+  position: relative;
+  z-index: 2;
+  display: table;
+  min-width: 112px;
+  padding: 8px 24px;
+  margin: 0 0 -7px 18px;
+  color: #2a1a08;
+  font-weight: 900;
+  text-align: center;
+  background: linear-gradient(135deg, #ffe3a1, #be7b22);
+  border-radius: 14px 14px 3px 3px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .3);
+}
+
+.pov-dialogue {
+  min-height: 122px;
+  padding: 25px 28px 18px;
+  color: #fff9e9;
+  background: rgba(13, 10, 9, .9);
+  border: 1px solid rgba(255, 220, 151, .5);
+  border-radius: 18px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+  backdrop-filter: blur(12px);
+}
+
+.pov-dialogue p {
+  margin: 8px 0 0;
+  font-size: clamp(1rem, 2.1vw, 1.35rem);
+  line-height: 1.65;
+  font-weight: 700;
+}
+
+.pov-choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.pov-choices .choice {
+  min-height: 62px;
+  padding: 10px 14px;
+  color: #fff9eb;
+  background: rgba(30, 22, 16, .94);
+  border: 1px solid rgba(255, 220, 151, .46);
+  border-radius: 13px;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease, border-color .18s ease;
+}
+
+.pov-choices .choice:hover,
+.pov-choices .choice:focus-visible {
+  transform: translateY(-3px);
+  background: rgba(93, 58, 24, .98);
+  border-color: #ffe09a;
+  outline: 3px solid rgba(255, 224, 154, .3);
+}
+
+.pov-continue {
+  display: block;
+  min-width: 320px;
+  min-height: 54px;
+  margin: 10px auto 0;
+}
+
+.pov-active .topbar,
+.pov-active .game-hud,
+.pov-active .progress-shell {
+  display: none !important;
+}
+
+.pov-chapter {
+  position: absolute;
+  z-index: 2;
+  top: max(18px, env(safe-area-inset-top));
+  left: 50%;
+  padding: 7px 15px;
+  color: #ffe7ac;
+  font-size: .78rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+  background: rgba(15, 11, 8, .68);
+  border: 1px solid rgba(255, 222, 157, .35);
+  border-radius: 999px;
+  transform: translateX(-50%);
+  backdrop-filter: blur(8px);
+}
+
+.pov-tools {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.pov-tools .btn {
+  min-height: 42px;
+  padding: 7px 15px;
+}
+
+.rival-pov > img {
+  object-position: 50% 24%;
+  animation: rival-intrusion .55s cubic-bezier(.2, .85, .25, 1.15) both;
+}
+
+.rival-pov .pov-vignette {
+  background:
+    linear-gradient(180deg, rgba(64, 4, 4, .16) 0%, transparent 35%, rgba(20, 2, 2, .92) 100%),
+    radial-gradient(circle at 50% 35%, transparent 30%, rgba(70, 0, 0, .52) 100%);
+}
+
+.rival-pov .pov-name {
+  color: #fff7e9;
+  background: linear-gradient(135deg, #9d1f18, #2c0806);
+}
+
+.rival-pov .pov-dialogue {
+  border-color: rgba(255, 104, 76, .58);
+  box-shadow: 0 18px 70px rgba(85, 0, 0, .5);
+}
+
+.rival-alert {
+  position: absolute;
+  z-index: 2;
+  top: max(20px, env(safe-area-inset-top));
+  left: 50%;
+  padding: 9px 20px;
+  color: #fff3dc;
+  font-size: .82rem;
+  font-weight: 950;
+  letter-spacing: .2em;
+  background: rgba(126, 15, 10, .88);
+  border: 1px solid rgba(255, 177, 132, .72);
+  border-radius: 4px;
+  transform: translateX(-50%) skew(-7deg);
+  box-shadow: 0 0 34px rgba(255, 47, 25, .32);
+}
+
+.rival-choices .choice {
+  border-color: rgba(255, 117, 89, .5);
+}
+
+.rival-choices .choice:hover,
+.rival-choices .choice:focus-visible {
+  background: rgba(112, 25, 18, .96);
+  border-color: #ff9d83;
+}
+
+@keyframes rival-intrusion {
+  from { opacity: 0; transform: translateX(8%) scale(1.12); filter: saturate(1.5) contrast(1.25); }
+  to { opacity: 1; transform: translateX(0) scale(1); filter: none; }
+}
+
+@media (min-width: 761px) {
+  .pov-stage::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    inset: -36px;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(9, 6, 4, .18), rgba(9, 6, 4, .76)),
+      url("../assets/character/sayu-reference-web.png") center 34% / cover no-repeat;
+    filter: blur(28px) brightness(.55) saturate(.75);
+    transform: scale(1.08);
+  }
+
+  .rival-pov::before {
+    background:
+      linear-gradient(180deg, rgba(40, 2, 2, .12), rgba(16, 1, 1, .8)),
+      url("../Tae.png") center 25% / cover no-repeat;
+    filter: blur(28px) brightness(.48) saturate(.9);
+  }
+
+  .pov-stage > img {
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    object-fit: contain;
+    object-position: 50% 50%;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, rgba(0, 0, 0, .92) 82%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 72%, rgba(0, 0, 0, .92) 82%, transparent 100%);
+  }
+
+  .pov-stage::after {
+    display: none;
+  }
+
+  .rival-pov > img {
+    object-position: 50% 50%;
+  }
+
+  .pov-bottom {
+    z-index: 3;
+    bottom: 42px;
+  }
+
+  .pov-vignette {
+    z-index: 2;
+  }
+
+  .rival-alert,
+  .pov-chapter {
+    z-index: 3;
+  }
+}
+
+@keyframes pov-arrive {
+  from { opacity: 0; transform: scale(1.06); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pov-stage > img,
+  .rival-pov > img { animation: none; }
+}
+
+@media (max-width: 760px) {
+  .game-active[data-scene="intro"] #scene {
+    padding: 18px 12px 40px;
+  }
+
+  .setup-screen {
+    min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .setup-screen > img {
+    height: 340px;
+    object-position: 50% 20%;
+  }
+
+  .setup-card {
+    position: relative;
+    z-index: 2;
+    margin-top: -65px;
+    padding: 22px 17px;
+  }
+
+  .pov-stage > img {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 30%;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .rival-pov > img {
+    object-position: 50% 18%;
+  }
+
+  .pov-bottom {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: calc(100% - 18px);
+  }
+
+  .pov-dialogue {
+    min-height: 105px;
+    padding: 22px 15px 13px;
+  }
+
+  .pov-dialogue p {
+    font-size: 1rem;
+  }
+
+  .pov-choices {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .pov-choices .choice {
+    min-height: 49px;
+    padding: 7px 10px;
+  }
+
+  .pov-continue {
+    width: 100%;
+    min-width: 0;
+  }
+}
