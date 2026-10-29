@@ -4,6 +4,7 @@ import {
   $, $$, esc, state, data, log, announce, art, tool, allArtifactIds, order,
   sfx, burst, toast, speak, addAffection, restoreFocus, identified, hooks, save
 } from './core.js';
+import { SAY } from './lines.js';
 
 const TOOLS = () => data.artifacts.tools;
 function slot(id, toolId) {
@@ -126,7 +127,7 @@ function answer(aId, toolId, pick) {
     sfx('wrong');
     const el = $(`#status-${toolId}`);
     if (el) el.textContent = '다시 보세요. 판독 결과 안에 답의 근거가 있습니다.';
-    speak('조금 달라. 판독 결과를 한 번 더 읽어 봐.');
+    speak(SAY.retry);
     save();
     return;
   }
@@ -164,7 +165,7 @@ function register(aId) {
         <li>사유의 전용 이야기 해금</li>
       </ul>
     </div>`, () => { hooks.render(); });
-  speak(`${a.name}을 완전히 알아봤어. 이 조각 이야기, 들어 줄래?`);
+  speak(SAY.identified(a.name));
 }
 
 export function bind() {

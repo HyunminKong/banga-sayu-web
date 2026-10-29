@@ -3,6 +3,7 @@ import {
   $, $$, esc, state, data, log, announce, art,
   sfx, burst, shake, toast, speak, addAffection, hooks, save
 } from './core.js';
+import { SAY } from './lines.js';
 
 let picked = null;
 
@@ -72,7 +73,7 @@ function place(zone, el) {
   addAffection(5, 'reconstruction_correct');
   sfx('correct'); burst(el, '♥', 12);
   announce(`${a.name}을 올바른 위치에 배치했습니다.`);
-  speak(`좋아. ${a.name}의 자리를 찾았어.`);
+  speak(SAY.placed(a.name));
   picked = null;
   save();
   setTimeout(() => hooks.render(), 240);

@@ -7,6 +7,7 @@ import {
   sfx, burst, shake, toast, speak, speakRival, addAffection,
   focusBudget, focusLeft, spendFocus, restoreFocus, hooks, save
 } from './core.js';
+import { SAY } from './lines.js';
 import * as sense from './sense.js';
 
 const COLS = () => data.artifacts.grid.cols;
@@ -151,7 +152,7 @@ function coach(text) {
   announce(text);
   speak(text);
 }
-const fill = (text, n) => text.replaceAll('{n}', String(n));
+const fill = SAY.clue;
 
 function stageRow() {
   const stages = D().stages;
@@ -265,7 +266,7 @@ function brush(i, el) {
     announce(`${art(a).name} 발견`);
     hooks.render();
     revealFind(art(a).name, `${art(a).brief} 조사대에서 도구로 감별해 주세요.`, art(a).icon, 'artifact');
-    speak(`${art(a).name}을 찾았어. 바로 답을 보지 말고 조사대에서 직접 살펴봐 줘.`);
+    speak(SAY.found(art(a).name));
   } else if (a) {
     sense.floor(where);
     announce(`${art(a).name} 자리. 이미 되찾은 조각입니다.`);
@@ -399,7 +400,7 @@ function duel(id) {
           <p>${esc(r.fact)}</p>
         </div>`;
       hooks.render();
-      speak('내 모습을 제대로 봐 줘서 되찾았어. 고마워.');
+      speak(SAY.duelWon);
     };
   });
 }

@@ -2,9 +2,10 @@
 // 호감도는 대화 선택보다 "관찰 정확도"에서 더 많이 오도록 배분했다.
 import {
   $, $$, esc, state, data, log, announce, art, tier, allArtifactIds, order,
-  sfx, burst, toast, speak, speakRival, addAffection, koreanVoices, canVibrate,
+  sfx, burst, toast, speak, speakRival, hush, addAffection, koreanVoices, hasRecordedVoice, canVibrate,
   toggleBgm, hooks, save, identified
 } from './core.js';
+import { SAY } from './lines.js';
 import * as sense from './sense.js';
 
 /* ---------- 설정 + 프롤로그 ---------- */
@@ -46,7 +47,7 @@ function setupView() {
               차분한 감상 · 제한 없이 원하는 만큼 관찰합니다</label>
           </div>
         </fieldset>
-        <label for="voiceSelect"><b>사유의 한국어 목소리</b></label>
+        <label for="voiceSelect"><b>사유의 목소리</b></label>
         <select id="voiceSelect" class="select"><option value="">기기의 추천 한국어 음성</option></select>
         <div class="setup-toggles">
           <label><input id="setupAudio" type="checkbox" ${state.audio ? 'checked' : ''}> 캐릭터 음성</label>
@@ -113,16 +114,25 @@ function bindStroke() {
 function fillVoices() {
   const sel = $('#voiceSelect');
   if (!sel) return;
-  sel.innerHTML = '<option value="">기기의 추천 한국어 음성</option>' +
-    koreanVoices().map(v => `<option value="${esc(v.voiceURI)}" ${state.voiceURI === v.voiceURI ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
+  // 녹음한 목소리가 있으면 그것이 기본이다. 기기 음성을 고르면 녹음 대신 브라우저 음성 합성으로 읽는다
+  const human = hasRecordedVoice() && state.voiceMode !== 'device';
+  sel.innerHTML = (hasRecordedVoice() ? `<option value="@human" ${human ? 'selected' : ''}>녹음한 자연스러운 목소리</option>` : '') +
+    `<option value="" ${!human && !state.voiceURI ? 'selected' : ''}>기기의 추천 한국어 음성</option>` +
+    koreanVoices().map(v => `<option value="${esc(v.voiceURI)}" ${!human && state.voiceURI === v.voiceURI ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
 }
 
 export function introBind() {
   if (state.introPhase === 'setup') {
     fillVoices();
     $$('[name="challenge"]').forEach(r => r.onchange = () => { state.challengeMode = r.value; save(); });
-    $('#voiceSelect').onchange = e => { state.voiceURI = e.target.value; save(); speak('이 목소리로 당신과 함께할게.'); };
-    $('#setupAudio').onchange = e => { state.audio = e.target.checked; if (!state.audio) window.speechSynthesis?.cancel(); save(); hooks.render(); };
+    $('#voiceSelect').onchange = e => {
+      const v = e.target.value;
+      state.voiceMode = v === '@human' ? 'human' : 'device';
+      if (v !== '@human') state.voiceURI = v;
+      log('voice_select', { mode: state.voiceMode });
+      save(); speak(SAY.voicePicked);
+    };
+    $('#setupAudio').onchange = e => { state.audio = e.target.checked; if (!state.audio) hush(); save(); hooks.render(); };
     $('#setupContrast').onchange = e => { state.contrast = e.target.checked; save(); hooks.render(); };
     $('#setupSfx').onchange = e => { state.sfx = e.target.checked; log('sfx_toggle', { enabled: state.sfx }); save(); };
     $('#setupHaptics').onchange = e => {
@@ -131,7 +141,7 @@ export function introBind() {
       save();
       sense.nearTouch();
     };
-    $('#voiceTest').onclick = () => speak('나에 대해 알고 싶지 않아? 당신과 함께라면 잃어버린 기억도 찾을 수 있을 것 같아.');
+    $('#voiceTest').onclick = () => speak(SAY.voiceTest);
     $('#musicTest').onclick = () => { toggleBgm(); hooks.render(); };
     $('#enterStory').onclick = () => {
       state.introPhase = 'story';

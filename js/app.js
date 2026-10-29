@@ -5,6 +5,7 @@ import {
   sfx, toast, speak, hush, toggleBgm, stopBgm, musicScene, musicLabel, hooks,
   SCENES, HUB_STEPS, HUB_LABELS
 } from './core.js';
+import { SAY } from './lines.js';
 import * as dig from './dig.js';
 import * as study from './study.js';
 import * as cast from './cast.js';
@@ -212,7 +213,7 @@ function completeBind() {
       tool_uses: state.logs.filter(x => x.action === 'tool_used').length
     });
     toast('회고와 평가를 저장했습니다. 로그를 다운로드할 수 있습니다.');
-    speak('오늘 나를 처음부터 끝까지 봐 줘서 고마워.');
+    speak(SAY.farewell);
   };
   $('#downloadBtn').onclick = downloadLog;
   $('#backHub').onclick = () => go('hub');
@@ -417,9 +418,11 @@ Promise.all([
   fetch('data/artifacts.json').then(r => r.json()),
   fetch('data/dialogue.json').then(r => r.json()),
   fetch('data/casting.json').then(r => r.json()),
-  fetch('study/questions.json').then(r => r.json())
-]).then(([a, d, c, q]) => {
-  data.artifacts = a; data.dialogue = d; data.casting = c; data.questions = q;
+  fetch('study/questions.json').then(r => r.json()),
+  // 녹음 목소리 목록 — 없으면 기기 음성으로 읽는다
+  fetch('data/voice.json').then(r => r.ok ? r.json() : null).catch(() => null)
+]).then(([a, d, c, q, v]) => {
+  data.artifacts = a; data.dialogue = d; data.casting = c; data.questions = q; data.voice = v;
   load();
   render();
 }).catch(err => {

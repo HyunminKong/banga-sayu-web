@@ -5,6 +5,7 @@ import {
   $, $$, esc, state, data, log, announce, clamp,
   sfx, burst, shake, toast, speak, addAffection, hooks, save
 } from './core.js';
+import { SAY } from './lines.js';
 import * as sense from './sense.js';
 
 const C = () => data.casting;
@@ -269,7 +270,7 @@ function resolvePour(value) {
   save(); hooks.render();
   ($('[data-repair]') || $('#castReveal'))?.focus({ preventScroll: true });
   announce(`${eff.text} 결함 ${c.defects}곳.`);
-  speak(c.defects ? `${eff.text} 결함이 ${c.defects}곳 생겼어. 수리할 수 있어.` : eff.text);
+  speak(c.defects ? [eff.text, SAY.defects(c.defects)] : eff.text);
 }
 
 function repair(optId) {

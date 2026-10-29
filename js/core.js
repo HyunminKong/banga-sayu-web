@@ -1,5 +1,6 @@
 // 상태 · 저장 · 로그 · 오디오 · 음성 · 공용 유틸
 import * as music from './music.js';
+import { voiceKey } from './lines.js';
 export const $ = s => document.querySelector(s);
 export const $$ = s => Array.from(document.querySelectorAll(s));
 export const esc = (s = '') => String(s).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
@@ -10,12 +11,12 @@ export const SCENES = ['intro', 'rivalIntro', 'pretest', 'hub', 'dig', 'study', 
 export const HUB_STEPS = ['intro', 'pretest', 'dig', 'study', 'cast', 'complete'];
 export const HUB_LABELS = { intro: '만남', pretest: '사전 질문', dig: '발굴', study: '감별', cast: '주조', complete: '엔딩' };
 
-export const data = { artifacts: null, dialogue: null, casting: null, questions: null };
+export const data = { artifacts: null, dialogue: null, casting: null, questions: null, voice: null };
 
 export function freshState() {
   return {
     scene: 'intro', introPhase: 'setup',
-    audio: true, bgm: false, contrast: false, voiceURI: '', challengeMode: 'story',
+    audio: true, bgm: false, contrast: false, voiceURI: '', voiceMode: 'human', challengeMode: 'story',
     sfx: true, haptics: true, coach: {}, digStage: 0, digStageManual: false, castAffection: 0,
     promiseChoice: '', rivalStep: 0, rivalChoice: '', affection: 0,
     focusUsed: 0, strokes: {}, revealed: [], found: [], junkFound: [], hintsUsed: 0,
@@ -79,6 +80,8 @@ export function restoreFocus(n) {
 }
 
 /* ---------- 음성 ---------- */
+// 대사는 미리 녹음한 목소리(data/voice.json → voice/*.mp3)로 읽는다. 녹음이 없는 문장이나
+// 녹음 파일을 못 찾았을 때, 또는 플레이어가 기기 음성을 골랐을 때만 브라우저 음성 합성으로 읽는다.
 export function koreanVoices() {
   return 'speechSynthesis' in window ? speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang)) : [];
 }
@@ -88,20 +91,104 @@ export function preferredVoice() {
     || vs.find(v => /Yuna|Heami|Sora|SunHi|Google.*한국|Natural|Premium/i.test(v.name))
     || vs[0];
 }
-function utter(text, { rate, pitch, volume }) {
-  if (!state.audio || !('speechSynthesis' in window)) return;
+const DEVICE = { sayu: { rate: 0.93, pitch: 1.16, volume: 0.96 }, rival: { rate: 0.98, pitch: 0.72, volume: 1 } };
+const SILENT = 'data:audio/wav;base64,UklGRsQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YaAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+const player = typeof Audio === 'function' ? new Audio() : null;
+let voiceSeq = 0;          // 새 말이 시작되면 이전 말(남은 이어 읽기 포함)은 버린다
+let voiceBroken = false;   // 녹음 파일을 한 번 못 읽으면 그 뒤로는 기기 음성으로
+const blobs = new Map();   // 웹에서 연 경우 받은 녹음(최근 30개) — 서비스 워커가 통째로 캐시해 오프라인에서도 읽힌다
+
+export const hasRecordedVoice = () => !!data.voice && Object.values(data.voice.lines || {}).some(m => Object.keys(m).length);
+const recorded = (who, text) => state.voiceMode !== 'device' && !voiceBroken && data.voice?.lines?.[who]?.[voiceKey(text)];
+
+// 모바일 브라우저는 첫 누름 전에는 소리를 막는다. 첫 누름에서 무음을 한 번 재생해 두면 이후 녹음이 재생된다(iOS)
+function unlock() {
+  ['pointerdown', 'keydown', 'touchend'].forEach(t => document.removeEventListener(t, unlock, true));
+  if (!player) return;
+  try { player.src = SILENT; player.play()?.catch(() => {}); } catch {}
+}
+if (typeof document !== 'undefined') ['pointerdown', 'keydown', 'touchend'].forEach(t => document.addEventListener(t, unlock, true));
+
+function clipSrc(file) {
+  const url = new URL((data.voice.base || 'voice/') + file, location.href).href;
+  if (!/^https?:$/.test(location.protocol) || !window.fetch) return Promise.resolve(url);   // 파일을 직접 연 경우는 그대로 재생
+  if (blobs.has(url)) return blobs.get(url);
+  const p = fetch(url).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+    .then(b => URL.createObjectURL(b)).catch(() => url);
+  blobs.set(url, p);
+  while (blobs.size > 30) { const [k, old] = blobs.entries().next().value; blobs.delete(k); old.then(u => u.startsWith('blob:') && URL.revokeObjectURL(u)); }
+  return p;
+}
+
+function deviceSay(who, text, my, done) {
+  if (!('speechSynthesis' in window)) { done(); return; }
+  const { rate, pitch, volume } = DEVICE[who];
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'ko-KR'; u.voice = preferredVoice() || null;
   u.rate = rate; u.pitch = pitch; u.volume = volume;
-  // 말소리와 BGM이 겹치면 듣기 어렵다 — 말하는 동안 BGM을 낮춘다
-  u.onstart = () => music.duck(true);
-  u.onend = u.onerror = () => music.duck(false);
+  u.onend = u.onerror = () => { if (my === voiceSeq) done(); };
   speechSynthesis.speak(u);
 }
-export const speak = text => utter(text, { rate: 0.93, pitch: 1.16, volume: 0.96 });
-export const speakRival = text => utter(text, { rate: 0.98, pitch: 0.72, volume: 1 });
-export function hush() { try { window.speechSynthesis?.cancel(); } catch {} }
+
+// 녹음은 묶음 파일(voice/pNN.mp3) 안의 구간 [파일, 시작 초, 끝 초]이다. 문장 사이에는 0.5초 쉼이 있어
+// 끝 지점을 조금 넘겨 멈춰도 다음 문장이 새어 나오지 않는다. 문장 하나짜리 파일 이름(문자열)도 그대로 재생한다.
+function playLine(who, text, my, done) {
+  const clip = recorded(who, text);
+  if (!clip || !player) { deviceSay(who, text, my, done); return; }
+  const [file, a, b] = Array.isArray(clip) ? clip : [clip, null, null];
+  const seg = a != null;
+  let finished = false, fellBack = false, stopT = 0, guardT = 0;
+  const fin = () => {
+    if (finished || my !== voiceSeq) return;
+    finished = true; clearTimeout(stopT); clearTimeout(guardT); player.ontimeupdate = player.onplaying = null;
+    done();
+  };
+  const stop = () => { if (my !== voiceSeq) return; try { player.pause(); } catch {} fin(); };
+  // 파일 오류와 play() 실패가 함께 올 수 있다 — 기기 음성으로는 한 번만 넘어간다
+  const fallback = () => { if (finished || fellBack || my !== voiceSeq) return; fellBack = voiceBroken = true; clearTimeout(guardT); deviceSay(who, text, my, fin); };
+  const seek = () => { if (seg && Math.abs(player.currentTime - a) > 0.05) { try { player.currentTime = a; } catch {} } };
+  clipSrc(file).then(src => {
+    if (my !== voiceSeq) return;
+    player.onended = fin;
+    player.onerror = fallback;
+    player.onloadedmetadata = () => { if (my === voiceSeq) seek(); };
+    player.ontimeupdate = seg ? () => { if (my === voiceSeq && player.currentTime >= b) stop(); } : null;
+    // timeupdate는 0.25초 간격이라 끝을 넘길 수 있다 — 재생이 시작되면 남은 길이만큼 타이머도 건다.
+    // 'playing' 순간의 위치가 실제 소리보다 조금 앞설 수 있어 0.15초 여유를 둔다(문장 사이 쉼 0.5초 안)
+    player.onplaying = seg ? () => { if (my !== voiceSeq) return; clearTimeout(stopT); stopT = setTimeout(stop, Math.max(0, b - player.currentTime) * 1000 + 150); } : null;
+    if (player.src !== src) player.src = src;
+    seek();
+    player.play()?.catch(err => { if (err?.name === 'NotAllowedError') fin(); else fallback(); });
+    // 재생이 멈춰 버려도 다음 말과 BGM이 묶이지 않게
+    guardT = setTimeout(fin, (seg ? (b - a) * 1000 : 30000) + 8000);
+  });
+}
+
+/** text가 배열이면 차례로 이어 읽는다(예: 쇳물 결과 + 결함 수) */
+function say(who, text) {
+  hush();
+  if (!state.audio) return;
+  const parts = (Array.isArray(text) ? text : [text]).filter(Boolean);
+  if (!parts.length) return;
+  const my = voiceSeq;
+  // 말소리와 BGM이 겹치면 듣기 어렵다 — 말하는 동안 BGM을 낮춘다
+  music.duck(true);
+  const next = i => {
+    if (my !== voiceSeq) return;
+    if (i >= parts.length) { music.duck(false); return; }
+    playLine(who, parts[i], my, () => next(i + 1));
+  };
+  next(0);
+}
+export const speak = text => say('sayu', text);
+export const speakRival = text => say('rival', text);
+export function hush() {
+  voiceSeq++;
+  try { window.speechSynthesis?.cancel(); } catch {}
+  try { if (player && !player.paused) player.pause(); } catch {}
+  music.duck(false);
+}
 
 /* ---------- 효과음 · BGM ---------- */
 const ctx = music.getContext;
